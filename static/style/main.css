@@ -8,9 +8,12 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    /*overflow: hidden;*/
 }
 .body::before {
+    position: fixed;
+    left: 0;
+    top: 0;
     z-index: -2;
     background-image: url(./../image/background.jpg);
     background-repeat: no-repeat;
@@ -25,38 +28,33 @@ body {
     100% { filter: hue-rotate(180deg); }
 }
 .body::after {
+    position: fixed;
+    left: 0;
+    top: 0;
     z-index: -1;
     background-color: #000;
     opacity: 0.1;
     content: "";
 }
-.body {
-    display: flex;
-}
 
 /*drawer*/
 .drawer {
-    position: relative;
-    flex-grow: 1;
-    margin: 60px 30px;
-    padding: 10px;
-    /*position: absolute;
+    position: absolute;
     width: 80%;
-    height: 80%;
-    left: 10%;
-    top: 10%;*/
+    flex-grow: 1;
+    left: 5%;
+    top: 8%;
+    margin-top: 30px;
     display: flex;
     justify-content: flex-start;
     flex-wrap: wrap;
 }
 .drawer::before {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    left: 0;
-    top: -24px;
-    padding-top: 12px;
-    padding-bottom: 48px;
+    position: fixed;
+    width: 84%;
+    height: 90%;
+    left: 3%;
+    top: 5%;
     background-color: #000;
     opacity: 0.3;
     border-radius: 12px;
@@ -64,7 +62,7 @@ body {
     color: #fff;
     text-align: center;
     font-size: 24px;
-    line-height: 24px;
+    line-height: 60px;
 }
 .drawer>a {
     position: relative;
@@ -77,10 +75,10 @@ body {
     text-align: center;
     padding: 3px;
     cursor: pointer;
-    margin: 12px;
     border-radius: 12px;
     color: #000;
     text-decoration: none;
+    transform: scale(0.8);
 }
 .drawer>a>span, .drawer>a>a>span {
     position: absolute;
@@ -132,10 +130,12 @@ body {
     background: none;
     border: none;
     color: #eee;
+    text-overflow: ellipsis;
 }
 .drawer>.group {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
 }
 .drawer>.group>a.repo, .drawer>.group>a.group {
     position: relative;
@@ -160,6 +160,10 @@ body {
 
 /*toolbar*/
 .toolbar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 10%;
     flex-shrink: 1;
 }
 .toolbar>a {
@@ -175,6 +179,10 @@ body {
     color: #666;
     cursor: inherit;
 }
+/*.toolbar>a>i {
+    padding-left: 6px;
+    float: right;
+}*/
 
 /*menu*/
 .menu {

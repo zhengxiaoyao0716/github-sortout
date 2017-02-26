@@ -5,7 +5,7 @@ declare module sortout {
         icon: string,
         color: string,
         note: string,
-        taget: string,
+        href: string,
     }
     interface GroupData {
         name: string,

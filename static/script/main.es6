@@ -42,7 +42,26 @@
     })();
 
     const main = {
-        keys: { name: "data-sortout-name", savePath: "./static/asset/github_sortout.json" },
+        size: "middle",
+        keys: { name: "data-sortout-name", savePath: "./static/asset/github_sortout.json", nextStyleIndex: "data-sortout-next_style_index", },
+        colors: {
+            "Assembly": "#6E4C13",
+            "C": "#555555",
+            "C++": "#f34b7d",
+            "C#": "#178600",
+            "CSS": "#563d7c",
+            "Go": "#375eab",
+            "HTML": "#e34c26",
+            "Java": "#b07219",
+            "JavaScript": "#f1e05a",
+            "Matlab": "#bb92ac",
+            "PHP": "#4F5D95",
+            "Python": "#3572A5",
+            "Ruby": "#701516",
+            "SQLPL": "#ccc",
+            "Shell": "#89e051",
+            "TypeScript": "#2b7489",
+        },
         drawers: [(() => document.querySelector(".drawer"))()],
         buttons: (buttons => {
             const toolbar = document.querySelector(".toolbar");
@@ -55,6 +74,19 @@
             return buttons;
         })({
             "back": e => history.back(),
+            "repos": e => main.syncRepos(sortout.reposApi),
+            "stars": e => main.syncRepos(sortout.starredApi),
+            "resize": e => ((style) => {
+                let index = parseInt(style.getAttribute(main.keys.nextStyleIndex) || { "small": 0, "middle": 1, "large": 2 }[main.size]);
+                style.setAttribute(main.keys.nextStyleIndex, String((index + 1) % 3));
+                style.innerHTML = `.drawer>a {${[
+                    "transform: scale(0.6); margin: -16px;",
+                    "transform: scale(0.8); margin: 0px;",
+                    "transform: scale(1); margin: 12px; margin-bottom: 16px;"
+                ][index]}};`;
+                style.setAttribute("id", "sizeStyle");
+                document.head.appendChild(style);
+            })(document.querySelector("#sizeStyle") || document.createElement("style")),
             "save": e => {
                 const win = open(`https://github.com/${sortout.user}/${sortout.repo}/edit/gh-pages/${main.keys.savePath}`, "_blank");
                 win.prompt("Please copy those data and paste into the editor: (Ctrl + C)", JSON.stringify(sortout.data));
@@ -69,8 +101,12 @@
                     menu.style.setProperty("top", y - 10 + "px");
                     anims.show.call(menu);
                     (button => {
-                        button.setAttribute("href", this.menu.href);
-                        button.setAttribute("target", "_blank");
+                        if (typeof this.menu.href == "string") {
+                            button.setAttribute("href", this.menu.href);
+                            button.setAttribute("target", "_blank");
+                        } else {
+                            button.addEventListener("click", this.menu.href);
+                        }
                     })(menu.querySelector("#openButton"));
                     ["name", "icon", "color", "note"].forEach(key => ((button, key) => {
                         const input = button.querySelector("input");
@@ -118,7 +154,7 @@
                     child.textContent = name[0];
                     break;
                 case "group":
-                    drawers ? drawers.forEach(([type, id]) => {
+                    drawers && drawers.length ? drawers.forEach(([type, id]) => {
                         const { name, icon, color, note, href, drawers, } = sortout.data[type][id];
                         main.addChild.call(child, type, id, name, icon, color, note);
                     }) : child.textContent = name[0];
@@ -144,7 +180,7 @@
                     child.remove();
                 }
                 child.menu = {
-                    get href() { return href; },
+                    get href() { return type == "repo" ? href : child.click; },
                     get name() { return name; },
                     set name(value) {
                         sortout.data[type][id].name = value;
@@ -223,20 +259,32 @@
                 main.addChild.call(drawer, type, id, name, icon, color, note, href, drawers);
             });
             drawer.classList.add("drawer");
-            (() => {
-                main.drawers[0].onAnimFinish = () => {
-                    document.body.prepend(drawer);
-                    main.drawers.unshift(drawer);
-                    main.buttons.back.classList.remove("invalid");
-                };
-                anims.fadeOut.call(main.drawers[0], 0.5);
-            })();
-        }
+            main.drawers[0].onAnimFinish = () => {
+                document.body.prepend(drawer);
+                main.drawers.unshift(drawer);
+                main.buttons.back.classList.remove("invalid");
+            };
+            anims.fadeOut.call(main.drawers[0], 0.5);
+        },
+        syncRepos(api) {
+            const childs = [];
+            sortout.fetch(api, (
+                {id, name, owner: {login: owner}, description, html_url, homepage, language, stargazers_count, forks_count, updated_at}
+            ) => {
+                if (!sortout.data.repo[id]) {
+                    sortout.data.repo[id] = { name, icon: "", color: main.colors[language], note: description, href: html_url, };
+                }
+                childs.push({ type: "repo", id, name, color: main.colors[language], note: description, href: html_url, });
+            }, repos => {
+                main.addDrawer(api, ...childs);
+            });
+        },
     };
     // debug
     window.main = main;
 
     window.addEventListener("load", () => {
+        main.buttons.resize.click();
         sortout.load(main.keys.savePath).then(data => {
             data.drawers.forEach(([type, id]) => {
                 const {name, icon, color, note, href, drawers, } = data[type][id];
@@ -264,13 +312,6 @@
                 return newButton;
             })());
         });
-        // sortout.fetch(sortout.reposApi, (
-        //     {id, name, owner: {login: owner}, description, html_url, homepage, language, stargazers_count, forks_count, updated_at}
-        // ) => {
-        //     if (!sortout.data.repo[id]) {
-        //     }
-        //     console.log(id, name, owner, description, html_url, homepage, language, stargazers_count, forks_count, updated_at);
-        // }, repos => console.log(repos.length));
         window.addEventListener("popstate", e => {
             if (main.drawers.length == 1) {
                 main.buttons.back.classList.add("invalid");
