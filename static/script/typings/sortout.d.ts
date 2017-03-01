@@ -1,22 +1,24 @@
 declare module sortout {
     type UrlString = string;
+    interface DrawerData extends Array<string> {
+        [0]: "repo" | "group",
+        [1]: string,
+    }
     interface RepoData {
         name: string,
         icon: string,
         color: string,
         note: string,
         href: string,
+        refs: Array<string>,
     }
     interface GroupData {
         name: string,
         icon: string,
         color: string,
         note: string,
-        drawers: string,
-    }
-    interface DrawerData extends Array<string> {
-        [0]: "repo" | "group",
-        [1]: string,
+        drawers: Array<DrawerData>,
+        refs: Array<string>,
     }
     export const data: {
         "repo": { [id: string]: RepoData };

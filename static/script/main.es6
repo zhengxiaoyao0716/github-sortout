@@ -42,7 +42,6 @@
     })();
 
     const main = {
-        size: "middle",
         keys: { name: "data-sortout-name", savePath: "./static/asset/github_sortout.json", nextStyleIndex: "data-sortout-next_style_index", },
         colors: {
             "Assembly": "#6E4C13",
@@ -62,8 +61,13 @@
             "Shell": "#89e051",
             "TypeScript": "#2b7489",
         },
-        drawers: [(() => document.querySelector(".drawer"))()],
+        drawers: [],
+        clipboard: [],
         buttons: (buttons => {
+            new Clipboard('#saveButton', { text() { return JSON.stringify(sortout.data); } }).on('success', function (e) {
+                const win = open(`https://github.com/${sortout.user}/${sortout.repo}/edit/gh-pages/${main.keys.savePath}`, "_blank");
+                win.alert("Please paste save-data into the editor: (Ctrl + V)");
+            });
             const toolbar = document.querySelector(".toolbar");
             for (const key in buttons) {
                 const onClick = buttons[key];
@@ -76,49 +80,129 @@
             "back": e => history.back(),
             "repos": e => main.syncRepos(sortout.reposApi),
             "stars": e => main.syncRepos(sortout.starredApi),
-            "resize": e => ((style) => {
-                let index = parseInt(style.getAttribute(main.keys.nextStyleIndex) || { "small": 0, "middle": 1, "large": 2 }[main.size]);
-                style.setAttribute(main.keys.nextStyleIndex, String((index + 1) % 3));
+            "all": e => {
+                main.addDrawer("All repositories", "All repositories", ...((childs) => {
+                    for (const id in sortout.data.repo) {
+                        const {name, icon, color, note, href, } = sortout.data.repo[id];
+                        childs.push({ type: "repo", id, name, icon, color, note, href, drawers: null, })
+                    }
+                    return childs;
+                })([]));
+            },
+            "resize": e => {
+                let style = document.querySelector("#sizeStyle");
+                let index = parseInt(localStorage.getItem("sortout-size-index"));
+                index = index == null ? 1 : index;
+                if (style) {
+                    index = (index + 1) % 3;
+                } else {
+                    style = document.createElement("style");
+                    style.setAttribute("id", "sizeStyle");
+                    document.head.appendChild(style);
+                }
+                localStorage.setItem("sortout-size-index", String(index));
+                style.setAttribute(main.keys.nextStyleIndex, String(index));
                 style.innerHTML = `.drawer>a {${[
                     "transform: scale(0.6); margin: -16px;",
                     "transform: scale(0.8); margin: 0px;",
                     "transform: scale(1); margin: 12px; margin-bottom: 16px;"
                 ][index]}};`;
-                style.setAttribute("id", "sizeStyle");
-                document.head.appendChild(style);
-            })(document.querySelector("#sizeStyle") || document.createElement("style")),
-            "save": e => {
-                const win = open(`https://github.com/${sortout.user}/${sortout.repo}/edit/gh-pages/${main.keys.savePath}`, "_blank");
-                win.prompt("Please copy those data and paste into the editor: (Ctrl + C)", JSON.stringify(sortout.data));
             },
+            // "save": e => {
+            //     const win = open(`https://github.com/${sortout.user}/${sortout.repo}/edit/gh-pages/${main.keys.savePath}`, "_blank");
+            //     win.prompt("Please copy those data and paste into the editor: (Ctrl + C)", JSON.stringify(sortout.data));
+            // },
         }),
         menu: (() => {
-            const menu = document.querySelector(".menu");
-            menu.addEventListener("mouseleave", (e) => anims.fadeOut.call(menu));
+            function create(...content) {
+                const menu = document.createElement("div");
+                menu.classList.add("menu");
+                menu.style.setProperty("display", "none");
+                menu.addEventListener("mouseleave", (e) => anims.fadeOut.call(menu));
+                document.body.appendChild(menu);
+                content.forEach(({ id, text, placeholder, hook, }, index) => {
+                    menu.appendChild((() => {
+                        if (!id) {
+                            return text ? (() => {
+                                const span = document.createElement("span");
+                                span.textContent = text;
+                                return span;
+                            })() : document.createElement("hr");
+                        }
+                        const a = document.createElement("a");
+                        a.setAttribute("id", id);
+                        a.setAttribute("href", "javascript:;");
+                        if (placeholder) {
+                            const span = document.createElement("span");
+                            span.textContent = text;
+                            a.appendChild(span);
+                            const input = document.createElement("input");
+                            input.setAttribute("placeholder", placeholder);
+                            a.appendChild(input);
+                            // input
+                            a.onclick = e => {
+                                a.classList.add("edit");
+                                input.focus();
+                            };
+                            input.onclick = e => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                            }
+                            input.onblur = e => {
+                                input.onSubmit(e);
+                                a.classList.remove("edit");
+                            };
+                            input.onkeydown = e => {
+                                e.keyCode == 13 && input.onSubmit(e);
+                            }
+                        } else {
+                            a.text = text;
+                        }
+                        hook && hook(a);
+                        return a;
+                    })());
+                });
+                return menu;
+            }
+            const menu = create(
+                { id: "openButton", text: "Open", },
+                {},
+                { text: "Edit info" },
+                { id: "nameButton", text: "Name", placeholder: "Name", },
+                { id: "iconButton", text: "Icon", placeholder: "Icon" },
+                { id: "colorButton", text: "Color", placeholder: "Color" },
+                { id: "noteButton", text: "Note", placeholder: "Note" },
+                {},
+                { text: "Operator" },
+                { id: "copyButton", text: "Copy" },
+                { id: "cutButton", text: "Cut", },
+                { id: "removeButton", text: "Remove", }
+            );
             return {
                 show(x, y) {
                     menu.style.setProperty("left", x - 10 + "px");
                     menu.style.setProperty("top", y - 10 + "px");
                     anims.show.call(menu);
                     (button => {
-                        if (typeof this.menu.href == "string") {
+                        if (this.menu.href) {
+                            button.textContent = "Open link in new tab";
                             button.setAttribute("href", this.menu.href);
                             button.setAttribute("target", "_blank");
+                            button.onclick = () => { };
                         } else {
-                            button.addEventListener("click", this.menu.href);
+                            button.textContent = "Open and edit group";
+                            button.setAttribute("href", "javascript:;");
+                            button.onclick = e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // todo edit mode.
+                                alert("unfinished");
+                            };
                         }
                     })(menu.querySelector("#openButton"));
                     ["name", "icon", "color", "note"].forEach(key => ((button, key) => {
                         const input = button.querySelector("input");
-                        button.onclick = e => {
-                            button.classList.add("edit");
-                            input.focus();
-                        };
-                        input.onclick = e => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                        };
-                        const onSubmit = e => {
+                        input.onSubmit = e => {
                             if (input.value == this.menu[key]) {
                                 return;
                             }
@@ -130,80 +214,134 @@
                                 input.value = this.menu[key];
                             }
                         };
-                        input.onblur = e => {
-                            onSubmit(e);
-                            button.classList.remove("edit");
-                        };
-                        input.onkeydown = e => {
-                            e.keyCode == 13 && onSubmit(e);
-                        }
                         input.value = this.menu[key];
                     })(menu.querySelector(`#${key}Button`), key));
-                    // todo
-                    menu.querySelector("#moveButton").setAttribute("href", "");
-                    menu.querySelector("#deleteButton").setAttribute("href", "");
-                }
+                    menu.querySelector("#copyButton").onclick = e => {
+                        this.menu.copy();
+                    };
+                    menu.querySelector("#cutButton").onclick = e => {
+                        this.menu.cut();
+                        anims.hide.call(menu);
+                    };
+                    menu.querySelector("#removeButton").onclick = e => {
+                        this.menu.remove();
+                        anims.hide.call(menu);
+                    };
+                },
+                bind(element, ...content) {
+                    const menu = create(...content)
+                    element && element.addEventListener("contextmenu", e => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        menu.style.setProperty("left", e.x - 10 + "px");
+                        menu.style.setProperty("top", e.y - 10 + "px");
+                        anims.show.call(menu);
+                    });
+                },
             };
         })(),
         addChild(type, id, name, icon, color, note, href, drawers) {
+            const abbr = name && name[0];  // name.slice(0, 2);
+            const _parent = this;
             const child = document.createElement("a");
             child.classList.add(type);
             child.setAttribute(main.keys.name, name);
             switch (type) {
                 case "repo":
-                    child.textContent = name[0];
+                    child.textContent = abbr;
                     break;
                 case "group":
-                    drawers && drawers.length ? drawers.forEach(([type, id]) => {
-                        const { name, icon, color, note, href, drawers, } = sortout.data[type][id];
-                        main.addChild.call(child, type, id, name, icon, color, note);
-                    }) : child.textContent = name[0];
+                    drawers && drawers.length ? (() => {
+                        let childs = [];
+                        drawers.slice(0, 5).forEach(([type, id]) => {
+                            const { name, icon, color, note, href, drawers, } = sortout.data[type][id];
+                            childs.push([type, id, name, icon, color, note]);
+                        });
+                        if (childs.length > 4) {
+                            childs = childs.slice(0, 3);
+                            const i = document.createElement("i");
+                            i.classList.add("fa", "fa-ellipsis-h");
+                            i.setAttribute("aria-hidden", "true");
+                            childs.push(["repo", null, null, i,]);
+                        }
+                        childs.forEach(data => main.addChild.call(child, ...data));
+                    })() : (() => {
+                        child.textContent = abbr
+                        child.style.setProperty("justify-content", "center");
+                    })();
                     break;
                 default:
                     break;
             }
             if (icon) {
-                const img = document.createElement("img");
-                img.src = icon;
-                child.appendChild(img);
+                if (icon instanceof Element) {
+                    child.appendChild(icon);
+                } else {
+                    const img = document.createElement("img");
+                    img.src = icon;
+                    child.appendChild(img);
+                }
             }
             if (color) {
                 const span = document.createElement("span");
                 span.style.setProperty("background-color", color);
-                span.textContent = name[0];
+                span.textContent = drawers && drawers.length ? "" : abbr;
                 child.appendChild(span);
             }
             // 阻止嵌套
-            if ((href || drawers)) {
+            if ((href != undefined || drawers != undefined)) {
                 function refresh() {
-                    child.after(main.addChild(type, id, name, icon, color, note, href, drawers));
+                    child.after(main.addChild.call({ id }, type, id, name, icon, color, note, href, drawers));
                     child.remove();
                 }
                 child.menu = {
-                    get href() { return type == "repo" ? href : child.click; },
-                    get name() { return name; },
+                    get name() { return name || ""; },
                     set name(value) {
                         sortout.data[type][id].name = value;
                         name = value;
                         refresh();
                     },
-                    get icon() { return icon; },
+                    get icon() { return icon || ""; },
                     set icon(value) {
                         sortout.data[type][id].icon = value;
                         icon = value;
                         refresh();
                     },
-                    get color() { return color; },
+                    get color() { return color || ""; },
                     set color(value) {
                         sortout.data[type][id].color = value;
                         color = value;
                         refresh();
                     },
-                    get note() { return note; },
+                    get note() { return note || ""; },
                     set note(value) {
                         sortout.data[type][id].note = value;
                         note = value;
                         refresh();
+                    },
+                    get href() { return type == "repo" ? href : ""; },
+                    copy() {
+                        main.clipboard.push([type, id]);
+                    },
+                    cut() {
+                        const data = _parent.id === "" ? sortout.data : sortout.data.group[_parent.id];
+                        if (data) {
+                            data.drawers = data.drawers.filter(([_type, _id]) => type != _type || id != _id);
+                        }
+                        sortout.data[type][id].refs = sortout.data[type][id].refs.filter(groupId => groupId != _parent.id);
+                        child.remove();
+                        main.clipboard.push([type, id]);
+                    },
+                    remove() {
+                        const refs = sortout.data[type][id].refs;
+                        refs.forEach(groupId => {
+                            const data = groupId === "" ? sortout.data : sortout.data.group[groupId];
+                            if (data) {
+                                data.drawers = data.drawers.filter(([_type, _id]) => type != _type || id != _id);
+                            }
+                        });
+                        delete (sortout.data[type][id]);
+                        child.remove();
                     },
                 };
                 child.appendChild((() => {
@@ -234,8 +372,7 @@
                 child.setAttribute("title", note);
                 href && child.setAttribute("href", href);
                 drawers && child.addEventListener("click", (e) => {
-                    history.pushState(name, name, "#" + name);
-                    main.addDrawer(name, ...((drawers) => {
+                    main.addDrawer(id, name, ...((drawers) => {
                         const childs = [];
                         drawers.forEach(([type, id]) => {
                             const { name, icon, color, note, href, drawers, } = sortout.data[type][id];
@@ -246,37 +383,130 @@
                 });
                 child.addEventListener("contextmenu", e => {
                     e.preventDefault();
+                    e.stopPropagation();
                     main.menu.show.call(child, e.x, e.y);
                 })
             }
-            this && this.appendChild && this.appendChild(child);
+            _parent && _parent.appendChild && _parent.appendChild(child);
             return child;
         },
-        addDrawer(name, ...childs) {
+        addDrawer(id, name, ...childs) {
+            id && history.pushState(id, id, "#" + name);
             const drawer = document.createElement("div");
+            drawer.id = id;
+            const groupData = id === "" ? sortout.data : sortout.data.group[id];
+            main.menu.bind(drawer,
+                {
+                    id: "closeButton", text: "Close and save group", hook(a) {
+                        a.addEventListener("click", e => {
+                            // todo save group.
+                            alert("unfinished");
+                        })
+                    }
+                },
+                {},
+                { text: "Operator" },
+                {
+                    id: "newButton", text: "New", placeholder: "Group name", hook(a) {
+                        if (!groupData) {
+                            a.classList.add("invalid");
+                            return;
+                        }
+                        const input = a.querySelector("input");
+                        input.onSubmit = e => {
+                            if (!input.value) {
+                                return;
+                            }
+                            if (groupData.drawers.some(([type, id]) => type == 'group' && id == input.value)) {
+                                alert("Conflict id with exited group");
+                            } else if (confirm(`Group name: "${input.value}", create now?`)) {
+                                groupData.drawers.push(["group", input.value]);
+                                if (!sortout.data.group[input.value]) {
+                                    sortout.data.group[input.value] = {
+                                        name: input.value,
+                                        icon: null,
+                                        color: null,
+                                        note: null,
+                                        drawers: [],
+                                        refs: []
+                                    }
+                                };
+                                sortout.data.group[input.value].refs.push(id);
+                                const group = sortout.data.group[input.value];
+                                main.addChild.call(drawer, "group", input.value, group.name, group.icon, group.color, group.note, null, group.drawers);
+                            }
+                            input.value = null;
+                            input.blur();
+                        };
+                    }
+                },
+                {
+                    id: "pasteButton", text: "Paste", hook(a) {
+                        a.onclick = e => {
+                            if (!main.clipboard.length) {
+                                alert("Nothing to paste");
+                                return;
+                            }
+                            while (main.clipboard.length) {
+                                const [type, id] = main.clipboard.pop();
+                                if (groupData.drawers.some(([_type, _id]) => type == _type && id == _id)) {
+                                    return;
+                                }
+                                groupData.drawers.push([type, id]);
+                                const data = sortout.data[type][id];
+                                data.refs.push(id);
+                                main.addChild.call(drawer, type, id, data.name, data.icon, data.color, data.note, data.href, data.drawers);
+                            }
+                        };
+                    }
+                },
+                {
+                    id: "editButton", text: "Edit", hook(a) {
+                        function onEditClick(e) {
+                            // todo edit mode.
+                            alert("unfinished");
+                            a.text = "Save";
+                            a.onclick = e => {
+                                // todo save group.
+                                alert("unfinished");
+                                a.text = "Edit";
+                                a.onclick = onEditClick;
+                            }
+                        };
+                        a.onclick = onEditClick;
+                    }
+                }
+            );
             drawer.setAttribute(main.keys.name, name);
             childs.forEach(({type, id, name, icon, color, note, href, drawers}) => {
                 main.addChild.call(drawer, type, id, name, icon, color, note, href, drawers);
             });
             drawer.classList.add("drawer");
-            main.drawers[0].onAnimFinish = () => {
+            if (main.drawers.length) {
+                main.drawers[0].onAnimFinish = () => {
+                    document.body.prepend(drawer);
+                    main.drawers.unshift(drawer);
+                    main.buttons.back.classList.remove("invalid");
+                };
+                anims.fadeOut.call(main.drawers[0], 0.5);
+            } else {
                 document.body.prepend(drawer);
                 main.drawers.unshift(drawer);
-                main.buttons.back.classList.remove("invalid");
-            };
-            anims.fadeOut.call(main.drawers[0], 0.5);
+            }
         },
-        syncRepos(api) {
+        syncRepos(api, filter = repo => true) {
             const childs = [];
-            sortout.fetch(api, (
-                {id, name, owner: {login: owner}, description, html_url, homepage, language, stargazers_count, forks_count, updated_at}
-            ) => {
-                if (!sortout.data.repo[id]) {
-                    sortout.data.repo[id] = { name, icon: "", color: main.colors[language], note: description, href: html_url, };
+            sortout.fetch(api, repo => {
+                if (filter && !filter(repo)) {
+                    return;
                 }
-                childs.push({ type: "repo", id, name, color: main.colors[language], note: description, href: html_url, });
+                const {id, name, owner: {login: owner}, description, html_url, homepage, language, stargazers_count, forks_count, updated_at} = repo;
+                if (!sortout.data.repo[id]) {
+                    sortout.data.repo[id] = { name, icon: "", color: main.colors[language], note: description, href: html_url, refs: [], };
+                    childs.push({ type: "repo", id, name, color: main.colors[language], note: description, href: html_url, });
+                }
             }, repos => {
-                main.addDrawer(api, ...childs);
+                main.addDrawer(api, api, ...childs);
             });
         },
     };
@@ -286,31 +516,11 @@
     window.addEventListener("load", () => {
         main.buttons.resize.click();
         sortout.load(main.keys.savePath).then(data => {
+            main.addDrawer("", "Pinned");
             data.drawers.forEach(([type, id]) => {
                 const {name, icon, color, note, href, drawers, } = data[type][id];
                 main.addChild.call(main.drawers[0], type, id, name, icon, color, note, href, drawers);
             });
-            main.drawers[0].appendChild((() => {
-                const newButton = document.createElement("a");
-                newButton.classList.add("repo");
-                newButton.setAttribute(main.keys.name, "New");
-                newButton.setAttribute("title", "Create new repository.");
-                newButton.appendChild((() => {
-                    const span = document.createElement("span");
-                    span.style.setProperty("background-color", "#03A9F4");
-                    span.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
-                    return span;
-                })());
-                newButton.appendChild((() => {
-                    const input = document.createElement("input");
-                    input.type = "text";
-                    input.value = "New";
-                    input.readOnly = true;
-                    return input;
-                })());
-                newButton.href = "https://github.com/new";
-                return newButton;
-            })());
         });
         window.addEventListener("popstate", e => {
             if (main.drawers.length == 1) {

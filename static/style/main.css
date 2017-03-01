@@ -82,15 +82,15 @@ body {
 }
 .drawer>a>span, .drawer>a>a>span {
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 1px;
+    top: 1px;
     display: block;
     width: 130px;
     height: 130px;
     border-radius: 12px;
     color: #fff;
 }
-.drawer>a>img {
+.drawer>a>img, .drawer>a>a>img {
     position: absolute;
     left: 3px;
     top: 3px;
@@ -135,7 +135,7 @@ body {
 .drawer>.group {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
 }
 .drawer>.group>a.repo, .drawer>.group>a.group {
     position: relative;
@@ -154,8 +154,15 @@ body {
     /*opacity: 0.3;*/
 }
 .drawer>a>a>span {
-    width: 56px;
-    height: 56px;
+    width: 54px;
+    height: 54px;
+}
+.drawer>a>a>img {
+    width: 46px;
+    height: 46px;
+    left: 1px;
+    top: 1px;
+    padding: 3px;
 }
 
 /*toolbar*/
@@ -175,14 +182,6 @@ body {
     text-decoration: none;
     white-space: nowrap;
 }
-.toolbar>a.invalid {
-    color: #666;
-    cursor: inherit;
-}
-/*.toolbar>a>i {
-    padding-left: 6px;
-    float: right;
-}*/
 
 /*menu*/
 .menu {
@@ -221,6 +220,9 @@ body {
     font-size: 12px;
     /*float: right;*/
 }
+.menu>a.invalid {
+    color: #999;
+}
 
 /*function*/
 /*.hidden {
@@ -234,3 +236,8 @@ body {
     opacity: 0;
     transition: opacity 1s;
 }*/
+a.invalid {
+    color: #666;
+    cursor: inherit;
+    pointer-events: none;
+}
