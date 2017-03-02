@@ -112,6 +112,57 @@
             //     const win = open(`https://github.com/${sortout.user}/${sortout.repo}/edit/gh-pages/${main.keys.savePath}`, "_blank");
             //     win.prompt("Please copy those data and paste into the editor: (Ctrl + C)", JSON.stringify(sortout.data));
             // },
+            "repair": e => {
+                for (const id in sortout.data.repo) {
+                    sortout.data.repo[id].refs = [];
+                }
+                for (const id in sortout.data.group) {
+                    sortout.data.group[id].refs = [];
+                }
+                const watchedMap = { repo: {}, group: {} };
+                function repair(parentId, group) {
+                    const uniqueMap = {};
+                    group.drawers = group.drawers.filter(([type, id]) => {
+                        if (uniqueMap[type + id]) {
+                            console.info(`Removed repeat ${type}: ${id}(name: ${sortout.data[type][id].name}) from ${parentId}(${group.name} || 'Pinned') .`);
+                            return false;
+                        }
+                        switch (type) {
+                            case "repo":
+                                watchedMap.repo[id] = true;
+                                sortout.data.repo[id].refs.push(parentId);
+                                break;
+                            case "group":
+                                if (!watchedMap.group[id]) {
+                                    watchedMap.group[id] = true;
+                                    repair(id, sortout.data.group[id]);
+                                }
+                                sortout.data.group[id].refs.indexOf(parentId) == -1 && sortout.data.group[id].refs.push(parentId);
+                                break;
+                            default:
+                            console.info(`Removed invalid item, type: ${type}, id: ${id} from ${parentId}(${group.name || "Pinned"})`);
+                                return false;
+                        }
+                        uniqueMap[type + id] = true;
+                        return true;
+                    });
+                }
+                repair("", sortout.data);
+                for (const id in sortout.data.repo) {
+                    if (!watchedMap.repo[id]) {
+                        console.info(`Deleted unused repo: ${id}(${sortout.data.repo[id].name})`);
+                        delete sortout.data.repo[id];
+                    }
+                }
+                for (const id in sortout.data.group) {
+                    if (!watchedMap.group[id]) {
+                        console.info(`Deleted unused group: ${id}(${sortout.data.group[id].name})`);
+                        delete sortout.data.group[id];
+                    }
+                }
+                alert("Repaired finish.");
+                location.href = "";
+            }
         }),
         menu: (() => {
             function create(...content) {
