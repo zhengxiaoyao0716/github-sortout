@@ -446,6 +446,7 @@
             const drawer = document.createElement("div");
             drawer.id = id;
             const groupData = id === "" ? sortout.data : sortout.data.group[id];
+            const parentId = id;
             main.menu.bind(drawer,
                 {
                     id: "closeButton", text: "Close and save group", hook(a) {
@@ -501,11 +502,11 @@
                             while (main.clipboard.length) {
                                 const [type, id] = main.clipboard.pop();
                                 if (groupData.drawers.some(([_type, _id]) => type == _type && id == _id)) {
-                                    return;
+                                    continue;
                                 }
                                 groupData.drawers.push([type, id]);
                                 const data = sortout.data[type][id];
-                                data.refs.push(id);
+                                data.refs.push(parentId);
                                 main.addChild.call(drawer, type, id, data.name, data.icon, data.color, data.note, data.href, data.drawers);
                             }
                         };
