@@ -83,7 +83,7 @@
             "all": e => {
                 main.addDrawer("All repositories", "All repositories", ...((childs) => {
                     for (const id in sortout.data.repo) {
-                        const {name, icon, color, note, href, } = sortout.data.repo[id];
+                        const { name, icon, color, note, href, } = sortout.data.repo[id];
                         childs.push({ type: "repo", id, name, icon, color, note, href, drawers: null, })
                     }
                     return childs;
@@ -140,7 +140,7 @@
                                 sortout.data.group[id].refs.indexOf(parentId) == -1 && sortout.data.group[id].refs.push(parentId);
                                 break;
                             default:
-                            console.info(`Removed invalid item, type: ${type}, id: ${id} from ${parentId}(${group.name || "Pinned"})`);
+                                console.info(`Removed invalid item, type: ${type}, id: ${id} from ${parentId}(${group.name || "Pinned"})`);
                                 return false;
                         }
                         uniqueMap[type + id] = true;
@@ -459,7 +459,7 @@
                 {},
                 { text: "Operator" },
                 {
-                    id: "newButton", text: "New", placeholder: "Group name", hook(a) {
+                    id: "newButton", text: "New", placeholder: "Repo or group name", hook(a) {
                         if (!groupData) {
                             a.classList.add("invalid");
                             return;
@@ -469,23 +469,29 @@
                             if (!input.value) {
                                 return;
                             }
-                            if (groupData.drawers.some(([type, id]) => type == 'group' && id == input.value)) {
-                                alert("Conflict id with exited group");
-                            } else if (confirm(`Group name: "${input.value}", create now?`)) {
-                                groupData.drawers.push(["group", input.value]);
-                                if (!sortout.data.group[input.value]) {
-                                    sortout.data.group[input.value] = {
+                            const href = prompt(`If you need create an repo, input the href, otherwise it will create a group.`);
+                            if (href === null) {
+                                return;
+                            }
+                            const type = href == "" ? "group" : "repo";
+                            if (groupData.drawers.some(([_type, id]) => _type == type && id == input.value)) {
+                                alert("Conflict id with exited " + type);
+                            } else {
+                                groupData.drawers.push([type, input.value]);
+                                if (sortout.data[type][input.value]) {
+                                    sortout.data[type][input.value] = {
                                         name: input.value,
                                         icon: null,
                                         color: null,
                                         note: null,
-                                        drawers: [],
+                                        href: href ? href : undefined,
+                                        drawers: href ? undefined : [],
                                         refs: []
                                     }
-                                };
-                                sortout.data.group[input.value].refs.push(id);
-                                const group = sortout.data.group[input.value];
-                                main.addChild.call(drawer, "group", input.value, group.name, group.icon, group.color, group.note, null, group.drawers);
+                                }
+                                const data = sortout.data[type][input.value];
+                                data.refs.push(id);
+                                main.addChild.call(drawer, type, input.value, data.name, data.icon, data.color, data.note, data.href, data.drawers);
                             }
                             input.value = null;
                             input.blur();
@@ -530,7 +536,7 @@
                 }
             );
             drawer.setAttribute(main.keys.name, name);
-            childs.forEach(({type, id, name, icon, color, note, href, drawers}) => {
+            childs.forEach(({ type, id, name, icon, color, note, href, drawers }) => {
                 main.addChild.call(drawer, type, id, name, icon, color, note, href, drawers);
             });
             drawer.classList.add("drawer");
@@ -552,7 +558,7 @@
                 if (filter && !filter(repo)) {
                     return;
                 }
-                const {id, name, owner: {login: owner}, description, html_url, homepage, language, stargazers_count, forks_count, updated_at} = repo;
+                const { id, name, owner: { login: owner }, description, html_url, homepage, language, stargazers_count, forks_count, updated_at } = repo;
                 if (!sortout.data.repo[id]) {
                     sortout.data.repo[id] = { name, icon: "", color: main.colors[language], note: description, href: html_url, refs: [], };
                     childs.push({ type: "repo", id, name, color: main.colors[language], note: description, href: html_url, });
@@ -570,7 +576,7 @@
         sortout.load(main.keys.savePath).then(data => {
             main.addDrawer("", "Pinned");
             data.drawers.forEach(([type, id]) => {
-                const {name, icon, color, note, href, drawers, } = data[type][id];
+                const { name, icon, color, note, href, drawers, } = data[type][id];
                 main.addChild.call(main.drawers[0], type, id, name, icon, color, note, href, drawers);
             });
         });
