@@ -77,7 +77,9 @@
             }
             return buttons;
         })({
-            "back": e => history.back(),
+            "back": function (e) {
+                this.href == 'javascript:;' && history.back();
+            },
             "repos": e => main.syncRepos(sortout.reposApi),
             "stars": e => main.syncRepos(sortout.starredApi),
             "all": e => {
@@ -544,7 +546,9 @@
                 main.drawers[0].onAnimFinish = () => {
                     document.body.prepend(drawer);
                     main.drawers.unshift(drawer);
-                    main.buttons.back.classList.remove("invalid");
+                    // main.buttons.back.classList.remove("invalid");
+                    main.buttons.back.href = 'javascript:;';
+                    main.buttons.back.innerHTML = 'Back <i class="fa fa-chevron-right" aria-hidden="true">';
                 };
                 anims.fadeOut.call(main.drawers[0], 0.5);
             } else {
@@ -582,13 +586,18 @@
         });
         window.addEventListener("popstate", e => {
             if (main.drawers.length == 1) {
-                main.buttons.back.classList.add("invalid");
+                // main.buttons.back.classList.add("invalid");
+                main.buttons.back.href = 'https://github.com/' + sortout.user;
+                main.buttons.back.innerHTML = '<i class="fa fa-home" aria-hidden="true"></i> GitHub';
                 return;
             }
             main.drawers.shift().remove();
             anims.show.call(main.drawers[0]);
-            main.drawers.length == 1 && main.buttons.back.classList.add("invalid");
+            // main.drawers.length == 1 && main.buttons.back.classList.add("invalid");
+            main.buttons.back.href = 'https://github.com/' + ortout.user;
+                main.buttons.back.innerHTML = '<i class="fa fa-home" aria-hidden="true"></i> GitHub';
         });
+        main.buttons.back.href = 'https://github.com/' + sortout.user;
         // window.onbeforeunload = e => "false";
     });
 })();
