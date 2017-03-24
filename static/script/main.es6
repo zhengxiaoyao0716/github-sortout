@@ -161,7 +161,7 @@
                     }
                 }
                 alert("Repaired finish.");
-                location.href = "";
+                // location.href = "";
             }
         }),
         menu: (() => {
