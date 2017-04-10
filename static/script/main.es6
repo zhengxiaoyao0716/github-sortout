@@ -585,17 +585,16 @@
             });
         });
         window.addEventListener("popstate", e => {
-            if (main.drawers.length == 1) {
+            if (main.drawers.length <= 2) {
                 // main.buttons.back.classList.add("invalid");
                 main.buttons.back.href = 'https://github.com/' + sortout.user;
                 main.buttons.back.innerHTML = '<i class="fa fa-home" aria-hidden="true"></i> GitHub';
-                return;
+                if (main.drawers.length == 1) {
+                    return;
+                }
             }
             main.drawers.shift().remove();
             anims.show.call(main.drawers[0]);
-            // main.drawers.length == 1 && main.buttons.back.classList.add("invalid");
-            main.buttons.back.href = 'https://github.com/' + ortout.user;
-                main.buttons.back.innerHTML = '<i class="fa fa-home" aria-hidden="true"></i> GitHub';
         });
         main.buttons.back.href = 'https://github.com/' + sortout.user;
         // window.onbeforeunload = e => "false";
